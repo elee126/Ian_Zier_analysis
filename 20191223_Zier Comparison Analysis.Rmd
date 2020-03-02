@@ -1,0 +1,171 @@
+---
+title: "Zier_comparison_analysis"
+author: "Emma"
+date: "12/23/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r packages, include=FALSE}
+library(tidyverse)
+library(here)
+library(ggplot2)
+library(knitr)
+library(kableExtra)
+library(lubridate)
+library(tableone)
+library(forcats)
+library(stringr)
+library(janitor)
+library(dplyr)
+library(qwraps2)
+library(plyr)
+library(ggridges)
+library(viridis)
+library(RColorBrewer)
+library(cowplot)
+library(gridExtra)
+library(beeswarm)
+library(ggbeeswarm)
+library(car)
+library(data.table)
+options(qwraps2_markup = "markdown")
+```
+
+## Read in COPD data
+```{r read_copd }
+
+our_data <- read_csv(here::here("Data", "20191021_Qualtrics data.csv"))
+our_codebook <- read_csv(here::here("Data", "20191014_Qualtrics codebook.csv"), skip = 1)
+
+our_codebook <- our_codebook[, -1]
+prefcols <- as.character(our_codebook[1, ])
+colnames(our_data)<-prefcols
+colnames(our_codebook)<-prefcols
+rm(prefcols)
+our_data <- our_data[-2, ]
+our_data <- our_data[-1, ]
+rownames(our_codebook)<-c("var", "description", "scoring")
+
+# Clean up
+rm(prefcols)
+
+```
+
+## Read in Zier original data 
+```{r read_zier }
+
+zier_data <- read_csv(here::here("Data", "20191220_Zier Data.csv"))
+zier_codebook <- read_csv(here::here("Data", "20191223_Zier codebook.csv"), skip = 1)
+
+zier_codebook <- zier_codebook[, -1]
+prefcols2 <- as.character(zier_codebook[1, ])
+colnames(zier_data) <- prefcols2 
+colnames(zier_codebook) <- prefcols2 
+rm(prefcols2) 
+rownames(zier_codebook) <- c("var", "description")
+
+# Clean up 
+rm(prefcols2)
+
+```
+
+
+## Set UID for COPD data (our_data)
+```{r uid}
+
+a<-dim(our_data)[1]
+
+our_data <- our_data %>%
+  mutate(uid=(1:a))
+
+```
+
+# COPD Zier Ridge Plot
+```{r copd_ridge}
+
+zier_vars <- c("zier_1", "zier_2", "zier_3", "zier_4", "zier_5", "zier_6", "zier_7", "zier_8", "zier_9", "zier_10", "zier_11", "zier_12", "zier_13", "zier_14", "zier_15", "zier_16")
+zier_vars <- rev(zier_vars)
+
+ridge_tbl <- our_data %>% 
+  dplyr::select(zier_vars) %>% 
+  gather()
+ridge_tbl$key <- factor(ridge_tbl$key, levels = zier_vars)
+ridge_tbl$value <- as.numeric(ridge_tbl$value)
+
+zier_ridge <- ridge_tbl %>% 
+  ggplot(aes(x = value, y = key, fill = ..x..)) + 
+  geom_density_ridges_gradient(scale = 3, bandwidth = 3, color = "white") + 
+  scale_x_continuous(limits = c(0, 100)) + 
+  scale_fill_viridis(name = "Likelihood of survival", option = "B") + 
+  labs(title = "Comparison of survival estimates between prognostic statements", 
+       x = "Likelihood of survival (%)", 
+       y = "Prognostic statement") + 
+  scale_y_discrete(labels = c("He will definitely not survive.", "He has a 5% chance of surviving.", "It is unlikely he will survive. That means he will likely die.", "It is very likely he will die.", "It is very unlikely he will survive.", "I don't think he will survive.", "He probably will not survive.", "It is possible he will not survive.", "I am concerned he will not survive.", "He has a 50% chance of surviving.", "I am optimistic he will survive.", "It is very unlikely he will die.", "I think he will survive.", "It is very likely he will survive.", "He has a 90% chance of surviving.", "He will definitely survive.")) + 
+  theme_bw() 
+
+zier_ridge
+
+```
+
+# COPD Zier Box Plot
+```{r copd_box }
+
+qual_box <- ridge_tbl %>% 
+  ggplot(aes(x = key, y = value)) + 
+  geom_boxplot(fill = "orchid1") + 
+  coord_flip() +
+  scale_y_continuous(limits = c(0, 100)) + 
+  labs(title = "Comparison of survival estimates between prognostic statements \n\n QUALTRICS", 
+       y = "Likelihood of survival (%)", 
+       x = "Prognostic statement") + 
+  scale_x_discrete(labels = c("He will definitely not survive.", "He has a 5% chance of surviving.", "It is unlikely he will survive. That means he will likely die.", "It is very likely he will die.", "It is very unlikely he will survive.", "I don't think he will survive.", "He probably will not survive.", "It is possible he will not survive.", "I am concerned he will not survive.", "He has a 50% chance of surviving.", "I am optimistic he will survive.", "It is very unlikely he will die.", "I think he will survive.", "It is very likely he will survive.", "He has a 90% chance of surviving.", "He will definitely survive.")) + 
+  theme_bw() + 
+  stat_summary(fun.y=mean, geom="point", shape=4, size=3)
+
+zier_box <- ridge_tbl %>% 
+  ggplot(aes(x = key, y = value)) + 
+  geom_boxplot(fill = "aquamarine") + 
+  coord_flip() +
+  scale_y_continuous(limits = c(0, 100)) + 
+  labs(title = "ZIER", 
+       y = "Likelihood of survival (%)", 
+       x = "Prognostic statement") + 
+  scale_x_discrete(labels = c("He will definitely not survive.", "He has a 5% chance of surviving.", "It is unlikely he will survive. That means he will likely die.", "It is very likely he will die.", "It is very unlikely he will survive.", "I don't think he will survive.", "He probably will not survive.", "It is possible he will not survive.", "I am concerned he will not survive.", "He has a 50% chance of surviving.", "I am optimistic he will survive.", "It is very unlikely he will die.", "I think he will survive.", "It is very likely he will survive.", "He has a 90% chance of surviving.", "He will definitely survive.")) + 
+  theme_bw() + 
+  stat_summary(fun.y=mean, geom="point", shape=4, size=3)
+
+
+grid.arrange(qual_box, zier_box, nrow=2)
+
+```
+
+# COPD summary table 
+```{r summary_copd }
+
+# Summary statistics 
+select <- grepl("zier", colnames(our_data)) 
+our_data[,select] <- apply(our_data[,select], 2, as.numeric)
+rm(select)
+
+tab_ridge_tbl <- our_data %>% 
+  dplyr::select(zier_vars)
+
+sum <- summary.data.frame(tab_ridge_tbl)
+
+print(sum)
+
+# n for each statement 
+counts <- ridge_tbl %>% 
+  filter(is.na(value) == FALSE) %>%
+  group_by(key) %>% 
+  tally()
+
+print(counts)
+
+```
+
+
