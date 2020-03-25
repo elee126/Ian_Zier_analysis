@@ -87,25 +87,73 @@ our_data <- our_data %>%
 # COPD Zier Ridge Plot
 ```{r copd_ridge}
 
+# Select the variables and order them from lowest survival to highest 
 zier_vars <- c("zier_1", "zier_2", "zier_3", "zier_4", "zier_5", "zier_6", "zier_7", "zier_8", "zier_9", "zier_10", "zier_11", "zier_12", "zier_13", "zier_14", "zier_15", "zier_16")
 zier_vars <- rev(zier_vars)
 
+# Gather the data 
 ridge_tbl <- our_data %>% 
   dplyr::select(zier_vars) %>% 
-  gather()
-ridge_tbl$key <- factor(ridge_tbl$key, levels = zier_vars)
-ridge_tbl$value <- as.numeric(ridge_tbl$value)
+  gather() %>% 
+  mutate(key = factor(key, levels = zier_vars)) %>% 
+  mutate(value = as.numeric(value)) %>% 
+  filter(complete.cases(value))
 
-zier_ridge <- ridge_tbl %>% 
+# Create variables for median and IQR values (???)
+ridge_tbl2 <- ridge_tbl %>% 
+  mutate(median = ifelse(key == "zier_16", median((filter(ridge_tbl, key == "zier_16"))$value), NA)) %>%
+  mutate(median = ifelse(key == "zier_15", median((filter(ridge_tbl, key == "zier_15"))$value), median)) %>% 
+  mutate(median = ifelse(key == "zier_14", median((filter(ridge_tbl, key == "zier_14"))$value), median)) %>% 
+  mutate(median = ifelse(key == "zier_13", median((filter(ridge_tbl, key == "zier_13"))$value), median)) %>% 
+  mutate(median = ifelse(key == "zier_12", median((filter(ridge_tbl, key == "zier_12"))$value), median)) %>% 
+  mutate(median = ifelse(key == "zier_11", median((filter(ridge_tbl, key == "zier_11"))$value), median)) %>% 
+  mutate(median = ifelse(key == "zier_10", median((filter(ridge_tbl, key == "zier_10"))$value), median)) %>% 
+  mutate(median = ifelse(key == "zier_9", median((filter(ridge_tbl, key == "zier_9"))$value), median)) %>% 
+  mutate(median = ifelse(key == "zier_8", median((filter(ridge_tbl, key == "zier_8"))$value), median)) %>% 
+  mutate(median = ifelse(key == "zier_7", median((filter(ridge_tbl, key == "zier_7"))$value), median)) %>% 
+  mutate(median = ifelse(key == "zier_6", median((filter(ridge_tbl, key == "zier_6"))$value), median)) %>% 
+  mutate(median = ifelse(key == "zier_5", median((filter(ridge_tbl, key == "zier_5"))$value), median)) %>% 
+  mutate(median = ifelse(key == "zier_4", median((filter(ridge_tbl, key == "zier_4"))$value), median)) %>% 
+  mutate(median = ifelse(key == "zier_3", median((filter(ridge_tbl, key == "zier_3"))$value), median)) %>% 
+  mutate(median = ifelse(key == "zier_2", median((filter(ridge_tbl, key == "zier_2"))$value), median)) %>% 
+  mutate(median = ifelse(key == "zier_1", median((filter(ridge_tbl, key == "zier_1"))$value), median)) 
+  
+  
+zier_ridge_og <- ridge_tbl %>% 
   ggplot(aes(x = value, y = key, fill = ..x..)) + 
-  geom_density_ridges_gradient(scale = 3, bandwidth = 3, color = "white") + 
+  geom_density_ridges_gradient(bandwidth = 3, color = "white", quantile_lines = TRUE, quantiles = 2, scale = 2, vline_size = 1.25, vline_color = "black") + 
   scale_x_continuous(limits = c(0, 100)) + 
   scale_fill_viridis(name = "Likelihood of survival", option = "B") + 
   labs(title = "Comparison of survival estimates between prognostic statements", 
        x = "Likelihood of survival (%)", 
        y = "Prognostic statement") + 
-  scale_y_discrete(labels = c("He will definitely not survive.", "He has a 5% chance of surviving.", "It is unlikely he will survive. That means he will likely die.", "It is very likely he will die.", "It is very unlikely he will survive.", "I don't think he will survive.", "He probably will not survive.", "It is possible he will not survive.", "I am concerned he will not survive.", "He has a 50% chance of surviving.", "I am optimistic he will survive.", "It is very unlikely he will die.", "I think he will survive.", "It is very likely he will survive.", "He has a 90% chance of surviving.", "He will definitely survive.")) + 
+  scale_y_discrete(labels = c("He will definitely not survive. (n=58)", "He has a 5% chance of surviving. (n=53)", "It is unlikely he will survive. That means he will likely die. (n=57)", "It is very likely he will die. (n=54)", "It is very unlikely he will survive. (n=57)", "I don't think he will survive. (n=57)", "He probably will not survive. (n=58)", "It is possible he will not survive. (n=52)", "I am concerned he will not survive. (n=54)", "He has a 50% chance of surviving. (n=56)", "I am optimistic he will survive. (n=59)", "It is very unlikely he will die. (n=56)", "I think he will survive. (n=57)", "It is very likely he will survive. (n=57)", "He has a 90% chance of surviving. (n=62)", "He will definitely survive. (n=59)")) + 
   theme_bw() 
+
+
+zier_ridge <- ridge_tbl %>% 
+  ggplot(aes(x = value, y = key, fill = ..x.., vline_color = ..quantile..)) + 
+  
+  geom_density_ridges_gradient(bandwidth = 3, scale = 2, color = "white", 
+                               quantile_lines = TRUE, vline_size = 1.25) + 
+  
+   scale_discrete_manual("vline_color", 
+                        values = c("black", "red", "black", "white"), guide = "none") + 
+  
+  scale_discrete_manual("vlineTypes", 
+                        values = c("dashed", "solid", "dashed", "dotted"), guide = "none") + 
+
+  scale_x_continuous(limits = c(0, 100)) + 
+  
+  scale_fill_viridis(name = "Likelihood of survival", option = "C") + 
+  
+  labs(title = "Comparison of survival estimates between prognostic statements", 
+       x = "Likelihood of survival (%)", 
+       y = "Prognostic statement") + 
+  scale_y_discrete(labels = c("He will definitely not survive. (n=58)", "He has a 5% chance of surviving. (n=53)", "It is unlikely he will survive. That means he will likely die. (n=57)", "It is very likely he will die. (n=54)", "It is very unlikely he will survive. (n=57)", "I don't think he will survive. (n=57)", "He probably will not survive. (n=58)", "It is possible he will not survive. (n=52)", "I am concerned he will not survive. (n=54)", "He has a 50% chance of surviving. (n=56)", "I am optimistic he will survive. (n=59)", "It is very unlikely he will die. (n=56)", "I think he will survive. (n=57)", "It is very likely he will survive. (n=57)", "He has a 90% chance of surviving. (n=62)", "He will definitely survive. (n=59)")) + 
+  
+  theme_bw() 
+
 
 zier_ridge
 
