@@ -104,8 +104,22 @@ rm(a)
 
 ```
 
-# COPD Zier Ridge Plot
-```{r copd_ridge}
+# COPD & ZIER Ridge Plots
+```{r ridge_plots}
+
+# n for each statement
+copd_counts <- copd_tbl %>% 
+  filter(is.na(value) == FALSE) %>%
+  group_by(key) %>% 
+  tally()
+
+zier_counts <- zier_tbl %>% 
+  filter(is.na(value) == FALSE) %>%
+  group_by(key) %>% 
+  tally()
+
+copd_counts
+zier_counts
 
 # COPD ridge plot
 copd_ridge <- copd_tbl %>% 
@@ -125,18 +139,33 @@ copd_ridge <- copd_tbl %>%
   
   scale_fill_viridis(name = "Likelihood of survival", option = "C") + 
   
-  labs(title = "Comparison of survival estimates between prognostic statements", 
+  labs(title = "COPD Population: Comparison of survival estimates between prognostic statements", 
        x = "Likelihood of survival (%)", 
        y = "Prognostic statement") + 
-  #scale_y_discrete(labels = c("He will definitely not survive. (n=58)", "He has a 5% chance of surviving. (n=53)", "It is unlikely he will survive. That means he will likely die. (n=57)", "It is very likely he will die. (n=54)", "It is very unlikely he will survive. (n=57)", "I don't think he will survive. (n=57)", "He probably will not survive. (n=58)", "It is possible he will not survive. (n=52)", "I am concerned he will not survive. (n=54)", "He has a 50% chance of surviving. (n=56)", "I am optimistic he will survive. (n=59)", "It is very unlikely he will die. (n=56)", "I think he will survive. (n=57)", "It is very likely he will survive. (n=57)", "He has a 90% chance of surviving. (n=62)", "He will definitely survive. (n=59)")) + 
-  scale_y_discrete(labels = c("He will definitely not survive. (n=79)", "He has a 5% chance of surviving. (n=80)", "It is unlikely he will survive. That means he will likely die. (n=80)", "It is very likely he will die. (n=80)", "It is very unlikely he will survive. (n=80)", "I don't think he will survive. (n=80)", "He probably will not survive. (n=80)", "It is possible he will not survive. (n=80)", "I am concerned he will not survive. (n=80)", "He has a 50% chance of surviving. (n=80)", "I am optimistic he will survive. (n=78)", "It is very unlikely he will die. (n=56)", "I think he will survive. (n=57)", "It is very likely he will survive. (n=80)", "He has a 90% chance of surviving. (n=80)", "He will definitely survive. (n=80)")) +
+  scale_y_discrete(labels = c("He will definitely not survive. (n=58)", "He has a 5% chance of surviving. (n=53)", "It is unlikely he will survive. That means he will likely die. (n=57)", "It is very likely he will die. (n=54)", "It is very unlikely he will survive. (n=57)", "I don't think he will survive. (n=57)", "He probably will not survive. (n=58)", "It is possible he will not survive. (n=52)", "I am concerned he will not survive. (n=54)", "He has a 50% chance of surviving. (n=56)", "I am optimistic he will survive. (n=59)", "It is very unlikely he will die. (n=56)", "I think he will survive. (n=57)", "It is very likely he will survive. (n=57)", "He has a 90% chance of surviving. (n=62)", "He will definitely survive. (n=59)")) +
   
   theme_bw() 
 
-copd_ridge
+copd_rige
 
-# Same code for zier_ridge with option = "D" and vline colors "pink", "red", "pink" AND 
-# scale_y_discrete(labels = c("He will definitely not survive. (n=79)", "He has a 5% chance of surviving. (n=80)", "It is unlikely he will survive. That means he will likely die. (n=80)", "It is very likely he will die. (n=80)", "It is very unlikely he will survive. (n=80)", "I don't think he will survive. (n=80)", "He probably will not survive. (n=80)", "It is possible he will not survive. (n=80)", "I am concerned he will not survive. (n=80)", "He has a 50% chance of surviving. (n=80)", "I am optimistic he will survive. (n=78)", "It is very unlikely he will die. (n=56)", "I think he will survive. (n=57)", "It is very likely he will survive. (n=80)", "He has a 90% chance of surviving. (n=80)", "He will definitely survive. (n=80)"))
+# ZIER Ridge 
+zier_ridge <- zier_tbl %>% 
+  ggplot(aes(x = value, y = key, fill = ..x.., vline_color = ..quantile..)) + 
+  geom_density_ridges_gradient(bandwidth = 3, scale = 2, color = "white", 
+                               quantile_lines = TRUE, vline_size = 1.25) + 
+   scale_discrete_manual("vline_color", 
+                        values = c("pink", "red", "pink", "white"), guide = "none") + 
+  scale_discrete_manual("vlineTypes", 
+                        values = c("dashed", "solid", "dashed", "dotted"), guide = "none") + 
+  scale_x_continuous(limits = c(0, 100)) + 
+  scale_fill_viridis(name = "Likelihood of survival", option = "D") + 
+  labs(title = "ZIER Population: Comparison of survival estimates between prognostic statements", 
+       x = "Likelihood of survival (%)", 
+       y = "Prognostic statement") +
+  scale_y_discrete(labels = c("He will definitely not survive. (n=79)", "He has a 5% chance of surviving. (n=80)", "It is unlikely he will survive. That means he will likely die. (n=80)", "It is very likely he will die. (n=80)", "It is very unlikely he will survive. (n=80)", "I don't think he will survive. (n=80)", "He probably will not survive. (n=80)", "It is possible he will not survive. (n=80)", "I am concerned he will not survive. (n=80)", "He has a 50% chance of surviving. (n=80)", "I am optimistic he will survive. (n=80)", "It is very unlikely he will die. (n=80)", "I think he will survive. (n=78)", "It is very likely he will survive. (n=80)", "He has a 90% chance of surviving. (n=80)", "He will definitely survive. (n=80)")) + 
+  theme_bw()
+
+zier_ridge
 
 ```
 
@@ -175,13 +204,14 @@ grid.arrange(copd_box, zier_box, nrow=2)
 
 ```
 
+
 ### THE TABLE FLIP ###
 # A grand saga where emma flips tables as a consequence of social distancing and telework
 # COPD summary table 
 ```{r summary_copd }
 
 # Summary statistics 
-select <- grepl("zier", colnames(copd_data)) 
+select <- grepl("zier", colnames(zier_data)) 
 copd_data[,select] <- apply(copd_data[,select], 2, as.numeric)
 rm(select)
 
@@ -190,23 +220,63 @@ tab_ridge_tbl <- copd_data %>%
 
 sum <- summary.data.frame(tab_ridge_tbl)
 
-rm(test)
+
+
+zier_data[,select] <- apply(zier_data[,select], 2, as.numeric)
+
+tab_ridge_tbl2 <- zier_data %>% 
+  dplyr::select(zier_vars)
+
+sum2 <- summary.data.frame(tab_ridge_tbl2)
+sum2
 
 
 
-# n for each statement 
-copd_counts <- copd_tbl %>% 
-  filter(is.na(value) == FALSE) %>%
-  group_by(key) %>% 
-  tally()
 
-zier_counts <- zier_tbl %>% 
-  filter(is.na(value) == FALSE) %>%
-  group_by(key) %>% 
-  tally()
 
-copd_counts
-zier_counts
+```
+# 2-sample Tests
+```{r ks_test }
+
+zier_vars <- c("zier_1", "zier_2", "zier_3", "zier_4", "zier_5", "zier_6", "zier_7", "zier_8", "zier_9", "zier_10", "zier_11", "zier_12", "zier_13", "zier_14", "zier_15", "zier_16")
+
+# KS TEST 
+
+ks_func <- function (x) {
+  ks.test(dplyr::filter(zier_tbl, key == x)[[2]], dplyr::filter(copd_tbl, key == x)[[2]]) # [[]] extracts element from list 
+  a <- dplyr::filter(zier_tbl, key == x)$value
+  b <- dplyr::filter(copd_tbl, key == x)$value
+  model <- ks.test(a,b)
+
+  d <- c("stat" = model$statistic, "p-val" = model$p.value)
+}
+
+ks_results <- sapply(zier_vars, ks_func)
+
+#----------------------
+
+# WILCOX TEST 
+wc_func <- function (x) {
+  wilcox.test(dplyr::filter(zier_tbl, key == x)[[2]], dplyr::filter(copd_tbl, key == x)[[2]]) 
+  a <- dplyr::filter(zier_tbl, key == x)$value 
+  b <- dplyr::filter(copd_tbl, key == x)$value 
+  model <- wilcox.test(a,b) 
+  
+  d <- c("stat" = model$statistic, "p-val" = model$p.value)
+}
+
+wc_results <- sapply(zier_vars, wc_func)
+
+#---------------------
+
+#summtab <- read_csv(here::here("Data", "20200327_Summary Table Hack.csv"))
+
+#summtab <- summtab %>% 
+#  mutate('ks p.value' = as.numeric(results$stat)) %>% 
+#  mutate('ks statistic' = as.numeric(results$p-val))
+
+
+
 
 ```
 
