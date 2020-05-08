@@ -32,9 +32,10 @@ library(data.table)
 options(qwraps2_markup = "markdown")
 ```
 
-## Read in COPD data
-```{r read_copd }
+## Read in COPD data & Zier data
+```{r read_data }
 
+#TEAM COPD 
 copd_data <- read_csv(here::here("Data", "20191021_Qualtrics data.csv"))
 copd_codebook <- read_csv(here::here("Data", "20191014_Qualtrics codebook.csv"), skip = 1)
 
@@ -45,10 +46,37 @@ colnames(copd_codebook)<-prefcols
 rm(prefcols)
 copd_data <- copd_data[-2, ]
 copd_data <- copd_data[-1, ]
-rownames(copd_codebook)<-c("var", "description", "scoring")
+rownames(copd_codebook)<-c("var", "description", "scoring") 
 
-# Subset dataset for figs 
-# Select the variables and order them from lowest survival to highest 
+#----------------------
+# TEAM ZIER 
+zier_data <- read_csv(here::here("Data", "20191220_Zier Data.csv"))
+zier_codebook <- read_csv(here::here("Data", "20191223_Zier codebook.csv"), skip = 1)
+
+zier_codebook <- zier_codebook[, -1]
+prefcols2 <- as.character(zier_codebook[1, ])
+colnames(zier_data) <- prefcols2 
+colnames(zier_codebook) <- prefcols2 
+rm(prefcols2) 
+rownames(zier_codebook) <- c("var", "description")
+
+#---------------------
+# Clean up 
+rm(prefcols)
+rm(prefcols2)
+
+```
+
+## Prep and subset COPD data for making figures :)
+```{r subset_copd}
+
+# Set up uid for the data 
+a<-dim(copd_data)[1]
+
+copd_data <- copd_data %>%
+  mutate(uid=(1:a))
+
+# Select the variables and order them from lowest survival to highest (zier_1 = highest)
 zier_vars <- c("zier_1", "zier_2", "zier_3", "zier_4", "zier_5", "zier_6", "zier_7", "zier_8", "zier_9", "zier_10", "zier_11", "zier_12", "zier_13", "zier_14", "zier_15", "zier_16")
 zier_vars <- rev(zier_vars)
 
@@ -61,46 +89,19 @@ copd_tbl <- copd_data %>%
   filter(complete.cases(value))
 
 # Clean up
-rm(prefcols)
+rm(a)
 
 ```
 
-## Read in Zier original data 
-```{r read_zier }
+## Read in Zier data 
+```{r subset_zier }
 
-zier_data <- read_csv(here::here("Data", "20191220_Zier Data.csv"))
-zier_codebook <- read_csv(here::here("Data", "20191223_Zier codebook.csv"), skip = 1)
-
-zier_codebook <- zier_codebook[, -1]
-prefcols2 <- as.character(zier_codebook[1, ])
-colnames(zier_data) <- prefcols2 
-colnames(zier_codebook) <- prefcols2 
-rm(prefcols2) 
-rownames(zier_codebook) <- c("var", "description")
-
-# Subset dataset for figs
 zier_tbl <- zier_data %>% 
   dplyr::select(zier_vars) %>% 
   gather() %>% 
   mutate(key = factor(key, levels = zier_vars)) %>% 
   mutate(value = as.numeric(value)) %>% 
   filter(complete.cases(value))
-
-# Clean up 
-rm(prefcols2)
-
-```
-
-
-## Set UID for COPD data (copd_data)
-```{r uid}
-
-a<-dim(copd_data)[1]
-
-copd_data <- copd_data %>%
-  mutate(uid=(1:a))
-
-rm(a)
 
 ```
 
@@ -120,6 +121,8 @@ zier_counts <- zier_tbl %>%
 
 copd_counts
 zier_counts
+
+#-------------------------
 
 # COPD ridge plot
 copd_ridge <- copd_tbl %>% 
@@ -148,12 +151,13 @@ copd_ridge <- copd_tbl %>%
 
 copd_rige
 
+#-------------------------
 # ZIER Ridge 
 zier_ridge <- zier_tbl %>% 
   ggplot(aes(x = value, y = key, fill = ..x.., vline_color = ..quantile..)) + 
   geom_density_ridges_gradient(bandwidth = 3, scale = 2, color = "white", 
                                quantile_lines = TRUE, vline_size = 1.25) + 
-   scale_discrete_manual("vline_color", 
+  scale_discrete_manual("vline_color", 
                         values = c("pink", "red", "pink", "white"), guide = "none") + 
   scale_discrete_manual("vlineTypes", 
                         values = c("dashed", "solid", "dashed", "dotted"), guide = "none") + 
@@ -169,9 +173,10 @@ zier_ridge
 
 ```
 
-# COPD Zier Box Plot
-```{r copd_box }
+# COPD & Zier Box Plots
+```{r box_plots }
 
+# COPD Boxplot
 copd_box <- copd_tbl %>% 
   ggplot(aes(x = key, y = value)) + 
   geom_boxplot(fill = "orchid1") + 
@@ -184,9 +189,8 @@ copd_box <- copd_tbl %>%
   theme_bw() + 
   stat_summary(fun.y=mean, geom="point", shape=4, size=3)
 
-
 #--------------------------------
-
+# Zier Boxplot
 zier_box <- zier_tbl %>% 
   ggplot(aes(x = key, y = value)) + 
   geom_boxplot(fill = "aquamarine") + 
@@ -204,16 +208,20 @@ grid.arrange(copd_box, zier_box, nrow=2)
 
 ```
 
+## Combined box plot :O 
+```{r boxplot_combined}
 
-### THE TABLE FLIP ###
-# A grand saga where emma flips tables as a consequence of social distancing and telework
-# COPD summary table 
+
+
+```
+
+
+## Summary Statistics COPD
 ```{r summary_copd }
 
-# Summary statistics 
-select <- grepl("zier", colnames(zier_data)) 
+# COPD Summary statistics 
+select <- grepl("zier", colnames(copd_data)) 
 copd_data[,select] <- apply(copd_data[,select], 2, as.numeric)
-rm(select)
 
 tab_ridge_tbl <- copd_data %>% 
   dplyr::select(zier_vars)
@@ -221,64 +229,68 @@ tab_ridge_tbl <- copd_data %>%
 sum <- summary.data.frame(tab_ridge_tbl)
 
 
-
+select <- grepl("zier", colnames(zier_data)) 
 zier_data[,select] <- apply(zier_data[,select], 2, as.numeric)
 
 tab_ridge_tbl2 <- zier_data %>% 
   dplyr::select(zier_vars)
 
 sum2 <- summary.data.frame(tab_ridge_tbl2)
-sum2
 
-
-
-
+rm(select)
 
 ```
-# 2-sample Tests
-```{r ks_test }
 
+## 2-sample Tests
+```{r ks_wc_tests }
+
+# Reorder variables from high to low survival (zier_1 = highest)
 zier_vars <- c("zier_1", "zier_2", "zier_3", "zier_4", "zier_5", "zier_6", "zier_7", "zier_8", "zier_9", "zier_10", "zier_11", "zier_12", "zier_13", "zier_14", "zier_15", "zier_16")
 
+#----------------------
 # KS TEST 
+# Part 1: The Function
+ks_func <- function (zier_var) {
+  zier_values <- dplyr::filter(zier_tbl, key == zier_var)[[2]]          # zier values for respective zier_var
+  copd_values <- dplyr::filter(copd_tbl, key == zier_var)[[2]]          # copd values for respective zier_var
+  
+  ks.test(zier_values,copd_values)                                      # run ks test zier values against copd values 
+ 
+  zier_pop <- dplyr::filter(zier_tbl, key == zier_var)$value            # grab values of zier_tbl 
+  copd_pop <- dplyr::filter(copd_tbl, key == zier_var)$value            # grab values of copd_tbl
+  
+  results <- ks.test(zier_pop,copd_pop)                                 # full set of ks.test results
 
-ks_func <- function (x) {
-  ks.test(dplyr::filter(zier_tbl, key == x)[[2]], dplyr::filter(copd_tbl, key == x)[[2]]) # [[]] extracts element from list 
-  a <- dplyr::filter(zier_tbl, key == x)$value
-  b <- dplyr::filter(copd_tbl, key == x)$value
-  model <- ks.test(a,b)
-
-  d <- c("stat" = model$statistic, "p-val" = model$p.value)
+  picky_results <- c("stat" = model$statistic, "p-val" = model$p.value) # pick the result that gets outputted  
 }
 
-ks_results <- sapply(zier_vars, ks_func)
+#Part 2: Applying the function 
+ks_results <- sapply(zier_vars, ks_func)           # iterate ks_func over all the zier_vars 
 
 #----------------------
-
 # WILCOX TEST 
-wc_func <- function (x) {
-  wilcox.test(dplyr::filter(zier_tbl, key == x)[[2]], dplyr::filter(copd_tbl, key == x)[[2]]) 
-  a <- dplyr::filter(zier_tbl, key == x)$value 
-  b <- dplyr::filter(copd_tbl, key == x)$value 
-  model <- wilcox.test(a,b) 
+wc_func <- function (zier_var) {
+  zier_values <- dplyr::filter(zier_tbl, key == zier_var)[[2]]
+  copd_values <- dplyr::filter(copd_tbl, key == zier_var)[[2]]
   
-  d <- c("stat" = model$statistic, "p-val" = model$p.value)
+  wilcox.test(zier_values, copd_values)
+  
+  zier_pop <- dplyr::filter(zier_tbl, key == zier_var)$value 
+  copd_pop <- dplyr::filter(copd_tbl, key == zier_var)$value 
+  
+  results <- wilcox.test(zier_pop, copd_pop) 
+  
+  picky_results <- c("stat" = model$statistic, "p-val" = model$p.value)
 }
 
 wc_results <- sapply(zier_vars, wc_func)
 
-#---------------------
-
-#summtab <- read_csv(here::here("Data", "20200327_Summary Table Hack.csv"))
-
-#summtab <- summtab %>% 
-#  mutate('ks p.value' = as.numeric(results$stat)) %>% 
-#  mutate('ks statistic' = as.numeric(results$p-val))
-
-
-
 
 ```
+
+
+
+
 
 
 
