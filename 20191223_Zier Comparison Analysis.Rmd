@@ -211,7 +211,68 @@ grid.arrange(copd_box, zier_box, nrow=2)
 ## Combined box plot :O 
 ```{r boxplot_combined}
 
+# Make a combined copd-zier tbl 
+copd_tbl <- copd_tbl %>% 
+  mutate(group = "copd")
+zier_tbl <- zier_tbl %>% 
+  mutate(group = "zier")
 
+combined_tbl <- rbind(copd_tbl, zier_tbl)
+
+# Make boxplot 
+
+cz_boxplot <- combined_tbl %>% 
+  ggplot(aes(x = key, y = value, fill = group)) +
+  geom_boxplot() + 
+  coord_flip() +
+  scale_y_continuous(limits = c(0, 108)) + 
+  scale_fill_discrete(name = "Group", labels = c("Outpatient (COPD)", "ICU (Zier)"), guide=guide_legend(reverse=TRUE)) + 
+  labs(title = "Surrogate Response to Prognostic Statements", 
+       y = "Likelihood of survival (%)", 
+       x = "Prognostic statement") + 
+  scale_x_discrete(labels = c("He will definitely not survive.", "He has a 5% chance of surviving.", "It is unlikely he will survive. That means he will likely die.", "It is very likely he will die.", "It is very unlikely he will survive.", "I don't think he will survive.", "He probably will not survive.", "It is possible he will not survive.", "I am concerned he will not survive.", "He has a 50% chance of surviving.", "I am optimistic he will survive.", "It is very unlikely he will die.", "I think he will survive.", "It is very likely he will survive.", "He has a 90% chance of surviving.", "He will definitely survive.")) + 
+  theme_bw() + 
+  
+  # Add summary stat mean 
+  stat_summary(fun.y=mean, aes(group=group, shape="Average"), position=position_dodge(0.8), geom="point", shape=4, size=3) + 
+  
+  scale_shape_manual("Average", values=c("Mean"="X", "Median"="|")) + # why doesn't this show up? merp 
+  
+  annotate("text", x=16.2, y=107, label="n=80") +
+  annotate("text", x=15.8, y=107, label="n=59") +
+  annotate("text", x=15.2, y=107, label="n=80") +
+  annotate("text", x=14.8, y=107, label="n=62") +
+  annotate("text", x=14.2, y=107, label="n=80") +
+  annotate("text", x=13.8, y=107, label="n=57") +
+  annotate("text", x=13.2, y=107, label="n=78") +
+  annotate("text", x=12.8, y=107, label="n=57") +
+  annotate("text", x=12.2, y=107, label="n=80") +
+  annotate("text", x=11.8, y=107, label="n=56") +
+  annotate("text", x=11.2, y=107, label="n=80") +
+  annotate("text", x=10.8, y=107, label="n=59") +
+  annotate("text", x=10.2, y=107, label="n=80") +
+  annotate("text", x=9.8, y=107, label="n=56") +
+  annotate("text", x=9.2, y=107, label="n=80") +
+  annotate("text", x=8.8, y=107, label="n=54") +
+  annotate("text", x=8.2, y=107, label="n=80") +
+  annotate("text", x=7.8, y=107, label="n=52") +
+  annotate("text", x=7.2, y=107, label="n=80") +
+  annotate("text", x=6.8, y=107, label="n=58") +
+  annotate("text", x=6.2, y=107, label="n=80") +
+  annotate("text", x=5.8, y=107, label="n=57") +
+  annotate("text", x=5.2, y=107, label="n=80") +
+  annotate("text", x=4.8, y=107, label="n=57") +
+  annotate("text", x=4.2, y=107, label="n=80") +
+  annotate("text", x=3.8, y=107, label="n=54") +
+  annotate("text", x=3.2, y=107, label="n=80") +
+  annotate("text", x=2.8, y=107, label="n=57") +
+  annotate("text", x=2.2, y=107, label="n=80") +
+  annotate("text", x=1.8, y=107, label="n=53") +
+  annotate("text", x=1.2, y=107, label="n=80") +
+  annotate("text", x=0.8, y=107, label="n=58") + 
+  
+  annotation_custom("text", x="Averages n/ X = Mean n/ | = Median")
+  
 
 ```
 
