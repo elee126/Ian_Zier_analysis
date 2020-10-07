@@ -29,6 +29,7 @@ library(RColorBrewer)
 library(cowplot)
 library(gridExtra)
 library(data.table)
+library(tibble)
 options(qwraps2_markup = "markdown")
 ```
 
@@ -149,7 +150,7 @@ copd_ridge <- copd_tbl %>%
   
   theme_bw() 
 
-copd_rige
+copd_ridge
 
 #-------------------------
 # ZIER Ridge 
@@ -226,12 +227,13 @@ cz_boxplot <- combined_tbl %>%
   geom_boxplot() + 
   coord_flip() +
   scale_y_continuous(limits = c(0, 108)) + 
-  scale_fill_discrete(name = "Group", labels = c("Outpatient (COPD)", "ICU (Zier)"), guide=guide_legend(reverse=TRUE)) + 
+  scale_fill_discrete(name = "Group", labels = c("Future ICU Surrogates", "Active ICU Surrogates"), guide=guide_legend(reverse=TRUE)) + 
   labs(title = "Surrogate Response to Prognostic Statements", 
        y = "Likelihood of survival (%)", 
        x = "Prognostic statement") + 
   scale_x_discrete(labels = c("He will definitely not survive.", "He has a 5% chance of surviving.", "It is unlikely he will survive. That means he will likely die.", "It is very likely he will die.", "It is very unlikely he will survive.", "I don't think he will survive.", "He probably will not survive.", "It is possible he will not survive.", "I am concerned he will not survive.", "He has a 50% chance of surviving.", "I am optimistic he will survive.", "It is very unlikely he will die.", "I think he will survive.", "It is very likely he will survive.", "He has a 90% chance of surviving.", "He will definitely survive.")) + 
   theme_bw() + 
+  theme(legend.position = "bottom") +
   
   # Add summary stat mean 
   stat_summary(fun.y=mean, aes(group=group, shape="Average"), position=position_dodge(0.8), geom="point", shape=4, size=3) + 
@@ -269,9 +271,9 @@ cz_boxplot <- combined_tbl %>%
   annotate("text", x=2.2, y=107, label="n=80") +
   annotate("text", x=1.8, y=107, label="n=53") +
   annotate("text", x=1.2, y=107, label="n=80") +
-  annotate("text", x=0.8, y=107, label="n=58") + 
+  annotate("text", x=0.8, y=107, label="n=58") #+ 
   
-  annotation_custom("text", x="Averages n/ X = Mean n/ | = Median")
+  #annotation_custom("text", x="Averages n/ X = Mean n/ | = Median")
   
 
 ```
@@ -315,17 +317,17 @@ ks_func <- function (zier_var) {
   zier_values <- dplyr::filter(zier_tbl, key == zier_var)[[2]]          # zier values for respective zier_var
   copd_values <- dplyr::filter(copd_tbl, key == zier_var)[[2]]          # copd values for respective zier_var
   
-  ks.test(zier_values,copd_values)                                      # run ks test zier values against copd values 
+  ks.test(zier_values,copd_values)                                      # take a look: run ks test zier values against copd values
  
   zier_pop <- dplyr::filter(zier_tbl, key == zier_var)$value            # grab values of zier_tbl 
   copd_pop <- dplyr::filter(copd_tbl, key == zier_var)$value            # grab values of copd_tbl
   
   results <- ks.test(zier_pop,copd_pop)                                 # full set of ks.test results
 
-  picky_results <- c("stat" = model$statistic, "p-val" = model$p.value) # pick the result that gets outputted  
+  picky_results <- c("stat" = results$statistic, "p-val" = results$p.value) # pick the result that gets outputted  
 }
 
-#Part 2: Applying the function 
+# Part 2: Applying the function 
 ks_results <- sapply(zier_vars, ks_func)           # iterate ks_func over all the zier_vars 
 
 #----------------------
@@ -341,7 +343,7 @@ wc_func <- function (zier_var) {
   
   results <- wilcox.test(zier_pop, copd_pop) 
   
-  picky_results <- c("stat" = model$statistic, "p-val" = model$p.value)
+  picky_results <- c("stat" = results$statistic, "p-val" = results$p.value)
 }
 
 wc_results <- sapply(zier_vars, wc_func)
@@ -351,34 +353,107 @@ wc_results <- sapply(zier_vars, wc_func)
 
 
 
+```{r median wilcoxon tests }
+
+# Median response from future (COPD) icu surrogate group
+copd_med <- apply(tab_ridge_tbl, 2, function(x) {
+  median(x, na.rm=TRUE)
+})
+
+# Median response from future (COPD) with previous VENT experience
+copd_data_vent <- filter(copd_data, scr_6 == "Yes")
+
+copd_tbl_vent <- copd_data_vent %>% 
+  dplyr::select(zier_vars) %>% 
+  gather() %>% 
+  mutate(key = factor(key, levels = zier_vars)) %>% 
+  mutate(value = as.numeric(value)) %>% 
+  filter(complete.cases(value))
+
+copd_vent_med <- apply(tab_ridge_tbl3, 2, function(x) {
+  median(x, na.rm=TRUE)
+  })
+
+copd_vent_med <- rev(copd_vent_med)
+
+#rm(copd_data_vent)
+#rm(copd_tbl_vent)
+
+# Median response from active (zier) icu surrogate group
+zier_med <- apply(tab_ridge_tbl2, 2, function(x) {
+  median(x, na.rm=TRUE)
+})
+
+med_diff <- (zier_med) - (copd_med)
+
+wc_med <- wilcox.test(zier_med, copd_med, paired=TRUE, conf.int=TRUE, exact=FALSE)
+
+# Results: 
+# Wilcoxon signed rank test with continuity correction
+
+# data:  zier_med and copd_med
+# V = 75.5, p-value = 0.004662
+# alternative hypothesis: true location shift is not equal to 0
+# 95 percent confidence interval:
+#   6.250032 16.749942
+# sample estimates:
+# (pseudo)median 
+#         11.156
+
+mean()
+#------------------------
+# Sensitivity! 
 
 
-
-
-
-
-# Discarded pieces 
-```{r}
-
-# Create variables for median and IQR values (???)
-ridge_tbl2 <- ridge_tbl %>% 
-  mutate(median = ifelse(key == "zier_16", median((filter(ridge_tbl, key == "zier_16"))$value), NA)) %>%
-  mutate(median = ifelse(key == "zier_15", median((filter(ridge_tbl, key == "zier_15"))$value), median)) %>% 
-  mutate(median = ifelse(key == "zier_14", median((filter(ridge_tbl, key == "zier_14"))$value), median)) %>% 
-  mutate(median = ifelse(key == "zier_13", median((filter(ridge_tbl, key == "zier_13"))$value), median)) %>% 
-  mutate(median = ifelse(key == "zier_12", median((filter(ridge_tbl, key == "zier_12"))$value), median)) %>% 
-  mutate(median = ifelse(key == "zier_11", median((filter(ridge_tbl, key == "zier_11"))$value), median)) %>% 
-  mutate(median = ifelse(key == "zier_10", median((filter(ridge_tbl, key == "zier_10"))$value), median)) %>% 
-  mutate(median = ifelse(key == "zier_9", median((filter(ridge_tbl, key == "zier_9"))$value), median)) %>% 
-  mutate(median = ifelse(key == "zier_8", median((filter(ridge_tbl, key == "zier_8"))$value), median)) %>% 
-  mutate(median = ifelse(key == "zier_7", median((filter(ridge_tbl, key == "zier_7"))$value), median)) %>% 
-  mutate(median = ifelse(key == "zier_6", median((filter(ridge_tbl, key == "zier_6"))$value), median)) %>% 
-  mutate(median = ifelse(key == "zier_5", median((filter(ridge_tbl, key == "zier_5"))$value), median)) %>% 
-  mutate(median = ifelse(key == "zier_4", median((filter(ridge_tbl, key == "zier_4"))$value), median)) %>% 
-  mutate(median = ifelse(key == "zier_3", median((filter(ridge_tbl, key == "zier_3"))$value), median)) %>% 
-  mutate(median = ifelse(key == "zier_2", median((filter(ridge_tbl, key == "zier_2"))$value), median)) %>% 
-  mutate(median = ifelse(key == "zier_1", median((filter(ridge_tbl, key == "zier_1"))$value), median)) 
-  
 
 ```
+
+
+```{r median wc sensitivity w vent }
+# Data
+copd_data_vent <- filter(copd_data, scr_6 == "Yes")
+
+# Tbl 
+select <- grepl("zier", colnames(copd_data_vent)) 
+copd_data_vent[,select] <- apply(copd_data_vent[,select], 2, as.numeric)
+
+tab_ridge_tbl3 <- copd_data_vent %>% 
+  dplyr::select(zier_vars)
+
+sum <- summary.data.frame(tab_ridge_tbl3)
+
+
+
+# WC Test
+copd_tbl_vent <- copd_data_vent %>% 
+  dplyr::select(zier_vars) %>% 
+  gather() %>% 
+  mutate(key = factor(key, levels = zier_vars)) %>% 
+  mutate(value = as.numeric(value)) %>% 
+  filter(complete.cases(value))
+
+copd_vent_med <- apply(tab_ridge_tbl3, 2, function(x) {
+  median(x, na.rm=TRUE)
+  })
+
+copd_vent_med <- rev(copd_vent_med)
+copd_vent_diff <- (zier_med) - (copd_vent_med)
+  
+wc_med_vent <- wilcox.test(zier_med, copd_vent_med, paired=TRUE, conf.int=TRUE, exact=FALSE)
+
+# 	Wilcoxon signed rank test with continuity correction
+
+# data:  zier_med and copd_vent_med
+# V = 65, p-value = 0.005077
+# alternative hypothesis: true location shift is not equal to 0
+# 95 percent confidence interval:
+#   7.249941 19.500009
+# sample estimates:
+# (pseudo)median 
+#        12.4635 
+
+  
+```
+
+
 
