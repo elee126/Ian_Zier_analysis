@@ -353,8 +353,10 @@ wc_results <- sapply(zier_vars, wc_func)
 
 
 
-```{r median wilcoxon tests }
 
+
+
+```{r getting the medians }
 # Median response from future (COPD) icu surrogate group
 copd_med <- apply(tab_ridge_tbl, 2, function(x) {
   median(x, na.rm=TRUE)
@@ -376,84 +378,49 @@ copd_vent_med <- apply(tab_ridge_tbl3, 2, function(x) {
 
 copd_vent_med <- rev(copd_vent_med)
 
-#rm(copd_data_vent)
-#rm(copd_tbl_vent)
+rm(copd_data_vent)
+rm(copd_tbl_vent)
 
 # Median response from active (zier) icu surrogate group
 zier_med <- apply(tab_ridge_tbl2, 2, function(x) {
   median(x, na.rm=TRUE)
 })
+```
 
-med_diff <- (zier_med) - (copd_med)
 
-wc_med <- wilcox.test(zier_med, copd_med, paired=TRUE, conf.int=TRUE, exact=FALSE)
+```{r median wilcoxon tests }
 
-# Results: 
-# Wilcoxon signed rank test with continuity correction
+# oook for cleanliness, we are going to make a tbl from all those med arrays
+future_median <- c(100, 90, 85, 75, 90, 76, 50, 33, 40, 18, 15, 20, 11, 20, 5, 1)
+future_vent_median <- c(100, 90, 82, 71, 90, 80, 50, 30, 40, 18.5, 11, 24.5, 14, 20, 5, 1)
+active_median <- c(100, 90, 90, 90, 90, 80, 50, 50, 50, 47.5, 32.5, 30, 25, 15, 15, 10)
+data <- tibble(active_median, future_median, future_vent_median)
 
-# data:  zier_med and copd_med
-# V = 75.5, p-value = 0.004662
-# alternative hypothesis: true location shift is not equal to 0
-# 95 percent confidence interval:
-#   6.250032 16.749942
-# sample estimates:
-# (pseudo)median 
-#         11.156
+data <- data %>% 
+  mutate(active_future_diff = active_median - future_median) %>% 
+  mutate(active_future_vent_diff = active_median - future_vent_median)
 
-mean()
+wc_med <- wilcox.test(data$active_median, data$future_median, paired=TRUE, conf.int=TRUE, exact=FALSE)
+
+mean(data$active_future_diff)   # 8.5
+median(data$active_future_diff) # 9.5
+
 #------------------------
 # Sensitivity! 
 
+wc_med_sensitivity <- wilcox.test(data$active_median, data$future_vent_median, paired=TRUE, conf.int=TRUE, exact=FALSE)
 
+#	Wilcoxon signed rank test with continuity correction
 
-```
-
-
-```{r median wc sensitivity w vent }
-# Data
-copd_data_vent <- filter(copd_data, scr_6 == "Yes")
-
-# Tbl 
-select <- grepl("zier", colnames(copd_data_vent)) 
-copd_data_vent[,select] <- apply(copd_data_vent[,select], 2, as.numeric)
-
-tab_ridge_tbl3 <- copd_data_vent %>% 
-  dplyr::select(zier_vars)
-
-sum <- summary.data.frame(tab_ridge_tbl3)
-
-
-
-# WC Test
-copd_tbl_vent <- copd_data_vent %>% 
-  dplyr::select(zier_vars) %>% 
-  gather() %>% 
-  mutate(key = factor(key, levels = zier_vars)) %>% 
-  mutate(value = as.numeric(value)) %>% 
-  filter(complete.cases(value))
-
-copd_vent_med <- apply(tab_ridge_tbl3, 2, function(x) {
-  median(x, na.rm=TRUE)
-  })
-
-copd_vent_med <- rev(copd_vent_med)
-copd_vent_diff <- (zier_med) - (copd_vent_med)
-  
-wc_med_vent <- wilcox.test(zier_med, copd_vent_med, paired=TRUE, conf.int=TRUE, exact=FALSE)
-
-# 	Wilcoxon signed rank test with continuity correction
-
-# data:  zier_med and copd_vent_med
+# data:  data$active_median and data$future_vent_median
 # V = 65, p-value = 0.005077
 # alternative hypothesis: true location shift is not equal to 0
 # 95 percent confidence interval:
-#   7.249941 19.500009
+#  7.249941 19.500009
 # sample estimates:
 # (pseudo)median 
-#        12.4635 
+#       12.4635 
 
-  
+mean(data$active_future_vent_diff) #8.6
+
 ```
-
-
-
